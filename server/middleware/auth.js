@@ -4,6 +4,7 @@ import { hasRole } from '../config/roles.js';
 
 export const authenticate = async (req, res, next) => {
   try {
+
     const token = req.headers.authorization?.split(' ')[1];
 
     if (!token) {
@@ -18,6 +19,11 @@ export const authenticate = async (req, res, next) => {
     req.userId = decoded.userId;
     req.companyId = decoded.companyId;
     req.role = decoded.role;
+    
+    console.log("===============")
+    console.log("Request Api  :  ", req.protocol + '://' + req.get('host') + req.originalUrl)
+    console.log("Request Body :  ", req.body)
+    console.log("===============")
 
     next();
   } catch (error) {

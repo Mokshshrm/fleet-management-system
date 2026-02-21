@@ -1,27 +1,98 @@
 import nodemailer from 'nodemailer';
 
-const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST,
-  port: process.env.SMTP_PORT,
-  secure: false,
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS
+let transporter = null;
+let transporterInitialized = false;
+
+// Initialize transporter lazily (only when first email is sent)
+const initializeTransporter = async () => {
+  if (transporterInitialized) {
+    return;
   }
-});
+
+  transporterInitialized = true;
+
+  // Check if SMTP is configured
+  const isSmtpConfigured = process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS;
+
+  if (isSmtpConfigured) {
+    // Use configured SMTP server
+    transporter = nodemailer.createTransport({
+      host: process.env.SMTP_HOST,
+      port: process.env.SMTP_PORT || 587,
+      secure: false,
+      auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS
+      }
+    });
+    console.log('✅ Email service: Using SMTP server');
+    console.log(`   Host: ${process.env.SMTP_HOST}`);
+    console.log(`   User: ${process.env.SMTP_USER}`);
+  } else {
+    // Fallback: Create test account with Ethereal
+    try {
+      const testAccount = await nodemailer.createTestAccount();
+      transporter = nodemailer.createTransport({
+        host: 'smtp.ethereal.email',
+        port: 587,
+        secure: false,
+        auth: {
+          user: testAccount.user,
+          pass: testAccount.pass
+        }
+      });
+      console.log('📧 Email service: Using Ethereal (test mode)');
+      console.log(`   View emails at: https://ethereal.email/messages`);
+      console.log(`   Login: ${testAccount.user} / ${testAccount.pass}`);
+    } catch (error) {
+      // Fallback: Log to console only
+      transporter = null;
+      console.log('📧 Email service: Console mode (emails will be logged only)');
+    }
+  }
+};
 
 export const sendEmail = async ({ to, subject, html }) => {
+  // Initialize transporter on first use
+  await initializeTransporter();
+
+  // If no transporter is ready, just log to console
+  if (!transporter) {
+    console.log('\n📧 ========== EMAIL (Console Mode) ==========');
+    console.log(`To: ${to}`);
+    console.log(`Subject: ${subject}`);
+    console.log('----------------------------------------');
+    console.log(html.substring(0, 200) + '...');
+    console.log('===========================================\n');
+    return { success: true, messageId: 'console-' + Date.now(), mode: 'console' };
+  }
+
   try {
     const info = await transporter.sendMail({
-      from: process.env.SMTP_FROM || process.env.SMTP_USER,
+      from: process.env.SMTP_FROM || process.env.SMTP_USER || 'noreply@fleetflow.local',
       to,
       subject,
       html
     });
 
-    return { success: true, messageId: info.messageId };
+    // If using Ethereal, provide preview URL
+    const previewUrl = nodemailer.getTestMessageUrl(info);
+    if (previewUrl) {
+      console.log(`\n📧 Email sent to: ${to}`);
+      console.log(`   Subject: ${subject}`);
+      console.log(`   Preview: ${previewUrl}\n`);
+    }
+
+    return { success: true, messageId: info.messageId, previewUrl };
   } catch (error) {
-    console.error('Email send error:', error);
+    console.error('❌ Email send error:', error.message);
+    
+    // Fallback to console logging if sending fails
+    console.log('\n📧 ========== EMAIL (Fallback) ==========');
+    console.log(`To: ${to}`);
+    console.log(`Subject: ${subject}`);
+    console.log('========================================\n');
+    
     return { success: false, error: error.message };
   }
 };
@@ -69,6 +140,48 @@ export const sendInvitationEmail = async ({ email, inviterName, companyName, tok
   return await sendEmail({
     to: email,
     subject: `You're invited to join ${companyName} on FleetFlow`,
+    html
+  });
+};
+
+export const sendWelcomeEmail = async (email, firstName, companyName) => {
+  const html = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background: #2563eb; color: white; padding: 20px; text-align: center; }
+        .content { background: #f9fafb; padding: 30px; }
+        .button { display: inline-block; background: #2563eb; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; margin: 20px 0; }
+        .footer { text-align: center; margin-top: 20px; font-size: 12px; color: #666; }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="header">
+          <h1>Welcome to FleetFlow!</h1>
+        </div>
+        <div class="content">
+          <h2>Hi ${firstName},</h2>
+          <p>Welcome to FleetFlow! Your account for <strong>${companyName}</strong> has been successfully created.</p>
+          <p>You can now log in to the system and start managing your fleet operations efficiently.</p>
+          <a href="${process.env.FRONTEND_URL}/login" class="button">Log In Now</a>
+          <p>If you have any questions or need assistance, feel free to reach out to our support team.</p>
+        </div>
+        <div class="footer">
+          <p>This email was sent to ${email}.</p>
+          <p>&copy; 2026 FleetFlow. All rights reserved.</p>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+
+  return await sendEmail({
+    to: email,
+    subject: `Welcome to FleetFlow!`,
     html
   });
 };

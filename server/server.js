@@ -1,6 +1,9 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+
+dotenv.config();
+
 import connectDB from './config/database.js';
 
 import authRoutes from './routes/auth.js';
@@ -13,12 +16,11 @@ import fuelRoutes from './routes/fuel.js';
 import expenseRoutes from './routes/expenses.js';
 import analyticsRoutes from './routes/analytics.js';
 
-dotenv.config();
-
 const app = express();
 
 app.use(cors({
-  origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
+//   origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
+  origin: '*',
   credentials: true
 }));
 

@@ -45,6 +45,10 @@ router.get('/invitations',
   authController.getInvitations
 );
 
+router.get('/invitations/:token/verify',
+  authController.verifyInvitation
+);
+
 router.post('/invitations/:token/accept',
   authController.acceptInvitation
 );
