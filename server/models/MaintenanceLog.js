@@ -152,10 +152,10 @@ const maintenanceLogSchema = new mongoose.Schema({
   timestamps: true
 });
 
-maintenanceLogSchema.index({ companyId: 1, vehicleId: 1 });
-maintenanceLogSchema.index({ companyId: 1, status: 1 });
-maintenanceLogSchema.index({ 'schedule.scheduledDate': 1 });
-maintenanceLogSchema.index({ maintenanceNumber: 1 });
+// maintenanceLogSchema.index({ companyId: 1, vehicleId: 1 });
+// maintenanceLogSchema.index({ companyId: 1, status: 1 });
+// maintenanceLogSchema.index({ 'schedule.scheduledDate': 1 });
+// maintenanceLogSchema.index({ maintenanceNumber: 1 });
 
 maintenanceLogSchema.pre('save', function(next) {
   this.cost.total = (this.cost.parts || 0) + (this.cost.labor || 0) + (this.cost.other || 0) + (this.cost.tax || 0);

@@ -114,9 +114,9 @@ const fuelLogSchema = new mongoose.Schema({
   timestamps: true
 });
 
-fuelLogSchema.index({ companyId: 1, vehicleId: 1, date: -1 });
-fuelLogSchema.index({ companyId: 1, date: -1 });
-fuelLogSchema.index({ vehicleId: 1, date: -1 });
+// fuelLogSchema.index({ companyId: 1, vehicleId: 1, date: -1 });
+// fuelLogSchema.index({ companyId: 1, date: -1 });
+// fuelLogSchema.index({ vehicleId: 1, date: -1 });
 
 fuelLogSchema.pre('save', function(next) {
   if (this.quantity.value && this.cost.pricePerUnit) {

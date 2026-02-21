@@ -112,11 +112,11 @@ const vehicleSchema = new mongoose.Schema({
   timestamps: true
 });
 
-vehicleSchema.index({ companyId: 1, status: 1 });
-vehicleSchema.index({ companyId: 1, vehicleType: 1 });
-vehicleSchema.index({ companyId: 1, licensePlate: 1 });
-vehicleSchema.index({ 'registration.expiryDate': 1 });
-vehicleSchema.index({ 'insurance.expiryDate': 1 });
+// vehicleSchema.index({ companyId: 1, status: 1 });
+// vehicleSchema.index({ companyId: 1, vehicleType: 1 });
+// vehicleSchema.index({ companyId: 1, licensePlate: 1 });
+// vehicleSchema.index({ 'registration.expiryDate': 1 });
+// vehicleSchema.index({ 'insurance.expiryDate': 1 });
 
 vehicleSchema.virtual('isMaintenanceDue').get(function() {
   return this.status === 'in_shop';

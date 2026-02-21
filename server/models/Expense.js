@@ -151,11 +151,11 @@ const expenseSchema = new mongoose.Schema({
   timestamps: true
 });
 
-expenseSchema.index({ companyId: 1, date: -1 });
-expenseSchema.index({ companyId: 1, category: 1 });
-expenseSchema.index({ companyId: 1, vehicleId: 1, date: -1 });
-expenseSchema.index({ companyId: 1, paymentStatus: 1 });
-expenseSchema.index({ expenseNumber: 1 });
+// expenseSchema.index({ companyId: 1, date: -1 });
+// expenseSchema.index({ companyId: 1, category: 1 });
+// expenseSchema.index({ companyId: 1, vehicleId: 1, date: -1 });
+// expenseSchema.index({ companyId: 1, paymentStatus: 1 });
+// expenseSchema.index({ expenseNumber: 1 });
 
 expenseSchema.pre('save', function(next) {
   if (this.amount !== undefined) {

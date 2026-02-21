@@ -169,9 +169,9 @@ const driverSchema = new mongoose.Schema({
   timestamps: true
 });
 
-driverSchema.index({ companyId: 1, status: 1 });
-driverSchema.index({ companyId: 1, email: 1 });
-driverSchema.index({ 'license.expiryDate': 1 });
+// driverSchema.index({ companyId: 1, status: 1 });
+// driverSchema.index({ companyId: 1, email: 1 });
+// driverSchema.index({ 'license.expiryDate': 1 });
 
 driverSchema.virtual('fullName').get(function() {
   return `${this.firstName} ${this.lastName}`;

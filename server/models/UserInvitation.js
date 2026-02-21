@@ -46,9 +46,9 @@ const userInvitationSchema = new mongoose.Schema({
   timestamps: true
 });
 
-userInvitationSchema.index({ companyId: 1, email: 1 });
-userInvitationSchema.index({ token: 1 });
-userInvitationSchema.index({ status: 1, expiresAt: 1 });
+// userInvitationSchema.index({ companyId: 1, email: 1 });
+// userInvitationSchema.index({ token: 1 });
+// userInvitationSchema.index({ status: 1, expiresAt: 1 });
 
 userInvitationSchema.methods.isExpired = function() {
   return Date.now() > this.expiresAt;

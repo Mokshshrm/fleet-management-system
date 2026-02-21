@@ -53,8 +53,8 @@ const userSchema = new mongoose.Schema({
   timestamps: true
 });
 
-userSchema.index({ companyId: 1, email: 1 });
-userSchema.index({ companyId: 1, role: 1 });
+// userSchema.index({ companyId: 1, email: 1 });
+// userSchema.index({ companyId: 1, role: 1 });
 
 userSchema.pre('save', async function(next) {
   if (!this.isModified('password')) return next();

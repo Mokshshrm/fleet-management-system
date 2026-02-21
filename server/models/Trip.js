@@ -167,11 +167,11 @@ const tripSchema = new mongoose.Schema({
   timestamps: true
 });
 
-tripSchema.index({ companyId: 1, status: 1 });
-tripSchema.index({ companyId: 1, vehicleId: 1 });
-tripSchema.index({ companyId: 1, driverId: 1 });
-tripSchema.index({ 'schedule.plannedDepartureTime': 1 });
-tripSchema.index({ tripNumber: 1 });
+// tripSchema.index({ companyId: 1, status: 1 });
+// tripSchema.index({ companyId: 1, vehicleId: 1 });
+// tripSchema.index({ companyId: 1, driverId: 1 });
+// tripSchema.index({ 'schedule.plannedDepartureTime': 1 });
+// tripSchema.index({ tripNumber: 1 });
 
 tripSchema.virtual('actualDistance').get(function() {
   if (this.odometer.start && this.odometer.end) {

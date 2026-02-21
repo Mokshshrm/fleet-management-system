@@ -60,7 +60,7 @@ const companySchema = new mongoose.Schema({
   timestamps: true
 });
 
-companySchema.index({ email: 1 });
-companySchema.index({ 'subscription.status': 1 });
+// companySchema.index({ email: 1 });
+// companySchema.index({ 'subscription.status': 1 });
 
 export default mongoose.model('Company', companySchema);
