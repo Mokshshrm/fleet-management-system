@@ -6,6 +6,7 @@ const router = express.Router();
 
 router.get('/dashboard',
   authenticate,
+  requireRoles('owner', 'admin', 'fleet_manager', 'dispatcher', 'safety_officer', 'financial_analyst'),
   analyticsController.getDashboardStats
 );
 

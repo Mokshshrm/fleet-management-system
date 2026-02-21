@@ -1,33 +1,41 @@
 import express from 'express';
-import { authenticate, requireRole } from '../middleware/auth.js';
+import { authenticate, requireRole, requirePermission } from '../middleware/auth.js';
+import { uploadFuelReceipt, handleUploadError } from '../middleware/upload.js';
 import * as fuelController from '../controllers/fuelController.js';
 
 const router = express.Router();
 
 router.get('/',
   authenticate,
+  requirePermission('VIEW_FUEL'),
   fuelController.getAllFuelLogs
 );
 
 router.get('/:id',
   authenticate,
+  requirePermission('VIEW_FUEL'),
   fuelController.getFuelLogById
 );
 
 router.post('/',
   authenticate,
+  requirePermission('CREATE_FUEL'),
+  uploadFuelReceipt,
+  handleUploadError,
   fuelController.createFuelLog
 );
 
 router.patch('/:id',
   authenticate,
-  requireRole('fleet_manager'),
+  requirePermission('UPDATE_FUEL'),
+  uploadFuelReceipt,
+  handleUploadError,
   fuelController.updateFuelLog
 );
 
 router.delete('/:id',
   authenticate,
-  requireRole('admin'),
+  requirePermission('DELETE_FUEL'),
   fuelController.deleteFuelLog
 );
 

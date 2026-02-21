@@ -6,14 +6,14 @@ export const getAllExpenses = async (req, res) => {
     const query = { companyId: req.companyId };
 
     if (category) query.category = category;
-    if (status) query.status = status;
+    if (status) query.paymentStatus = status;
     if (vehicleId) query.vehicleId = vehicleId;
     if (driverId) query.driverId = driverId;
     if (tripId) query.tripId = tripId;
     if (startDate || endDate) {
-      query.expenseDate = {};
-      if (startDate) query.expenseDate.$gte = new Date(startDate);
-      if (endDate) query.expenseDate.$lte = new Date(endDate);
+      query.date = {};
+      if (startDate) query.date.$gte = new Date(startDate);
+      if (endDate) query.date.$lte = new Date(endDate);
     }
 
     const total = await Expense.countDocuments(query);
@@ -21,9 +21,9 @@ export const getAllExpenses = async (req, res) => {
       .populate('vehicleId', 'name licensePlate')
       .populate('driverId', 'firstName lastName')
       .populate('tripId', 'tripNumber')
-      .populate('submittedBy', 'firstName lastName')
+      .populate('recordedBy', 'firstName lastName')
       .populate('approvedBy', 'firstName lastName')
-      .sort({ expenseDate: -1 })
+      .sort({ date: -1 })
       .limit(parseInt(limit))
       .skip((parseInt(page) - 1) * parseInt(limit));
 
@@ -50,7 +50,7 @@ export const getExpenseById = async (req, res) => {
       .populate('vehicleId')
       .populate('driverId')
       .populate('tripId')
-      .populate('submittedBy', 'firstName lastName email')
+      .populate('recordedBy', 'firstName lastName email')
       .populate('approvedBy', 'firstName lastName email');
 
     if (!expense) {
@@ -87,13 +87,42 @@ export const createExpense = async (req, res) => {
       }
     }
 
-    const expense = await Expense.create({
+    const expenseData = {
       ...req.body,
       companyId: req.companyId,
-      submittedBy: req.userId
-    });
+      recordedBy: req.userId
+    };
 
-    res.status(201).json({ status: 'success', data: { expense } });
+    // Calculate totalAmount if not provided
+    if (!expenseData.totalAmount && expenseData.amount !== undefined) {
+      expenseData.totalAmount = expenseData.amount + (expenseData.tax || 0);
+    }
+
+    // Handle file uploads
+    if (req.file) {
+      // Single receipt file
+      expenseData.receiptImage = `/uploads/expenses/${req.file.filename}`;
+    } else if (req.files && req.files.length > 0) {
+      // Multiple documents
+      expenseData.documents = req.files.map(file => ({
+        name: file.originalname,
+        type: file.mimetype,
+        url: `/uploads/expenses/${file.filename}`,
+        uploadedAt: new Date()
+      }));
+    }
+
+    const expense = await Expense.create(expenseData);
+
+    // Populate and return
+    const populatedExpense = await Expense.findById(expense._id)
+      .populate('vehicleId', 'name licensePlate')
+      .populate('driverId', 'firstName lastName')
+      .populate('tripId', 'tripNumber')
+      .populate('recordedBy', 'firstName lastName email')
+      .populate('approvedBy', 'firstName lastName email');
+
+    res.status(201).json({ status: 'success', data: { expense: populatedExpense } });
   } catch (error) {
     res.status(500).json({ status: 'error', message: error.message });
   }
@@ -106,7 +135,7 @@ export const updateExpense = async (req, res) => {
       return res.status(404).json({ status: 'error', message: 'Expense not found' });
     }
 
-    if (expense.status === 'approved') {
+    if (expense.approvalStatus === 'approved') {
       return res.status(400).json({ status: 'error', message: 'Cannot update approved expense' });
     }
 
@@ -126,7 +155,7 @@ export const deleteExpense = async (req, res) => {
       return res.status(404).json({ status: 'error', message: 'Expense not found' });
     }
 
-    if (expense.status === 'approved') {
+    if (expense.approvalStatus === 'approved') {
       return res.status(400).json({ status: 'error', message: 'Cannot delete approved expense' });
     }
 
@@ -144,11 +173,11 @@ export const approveExpense = async (req, res) => {
       return res.status(404).json({ status: 'error', message: 'Expense not found' });
     }
 
-    if (expense.status === 'approved') {
+    if (expense.approvalStatus === 'approved') {
       return res.status(400).json({ status: 'error', message: 'Expense already approved' });
     }
 
-    expense.status = 'approved';
+    expense.approvalStatus = 'approved';
     expense.approvedBy = req.userId;
     expense.approvedAt = new Date();
     await expense.save();
@@ -168,11 +197,11 @@ export const rejectExpense = async (req, res) => {
       return res.status(404).json({ status: 'error', message: 'Expense not found' });
     }
 
-    if (expense.status === 'approved') {
+    if (expense.approvalStatus === 'approved') {
       return res.status(400).json({ status: 'error', message: 'Cannot reject approved expense' });
     }
 
-    expense.status = 'rejected';
+    expense.approvalStatus = 'rejected';
     expense.notes = reason || expense.notes;
     await expense.save();
 
@@ -188,9 +217,9 @@ export const getExpensesByCategory = async (req, res) => {
     const query = { companyId: req.companyId };
 
     if (startDate || endDate) {
-      query.expenseDate = {};
-      if (startDate) query.expenseDate.$gte = new Date(startDate);
-      if (endDate) query.expenseDate.$lte = new Date(endDate);
+      query.date = {};
+      if (startDate) query.date.$gte = new Date(startDate);
+      if (endDate) query.date.$lte = new Date(endDate);
     }
 
     const expenses = await Expense.find(query);
@@ -208,10 +237,10 @@ export const getExpensesByCategory = async (req, res) => {
         };
       }
       categoryBreakdown[category].count++;
-      categoryBreakdown[category].totalAmount += expense.amount.value;
-      if (expense.status === 'pending') categoryBreakdown[category].pending++;
-      if (expense.status === 'approved') categoryBreakdown[category].approved++;
-      if (expense.status === 'rejected') categoryBreakdown[category].rejected++;
+      categoryBreakdown[category].totalAmount += expense.totalAmount;
+      if (expense.paymentStatus === 'pending') categoryBreakdown[category].pending++;
+      if (expense.approvalStatus === 'approved') categoryBreakdown[category].approved++;
+      if (expense.approvalStatus === 'rejected') categoryBreakdown[category].rejected++;
     });
 
     res.json({
@@ -230,28 +259,28 @@ export const getExpenseStats = async (req, res) => {
 
     if (vehicleId) query.vehicleId = vehicleId;
     if (startDate || endDate) {
-      query.expenseDate = {};
-      if (startDate) query.expenseDate.$gte = new Date(startDate);
-      if (endDate) query.expenseDate.$lte = new Date(endDate);
+      query.date = {};
+      if (startDate) query.date.$gte = new Date(startDate);
+      if (endDate) query.date.$lte = new Date(endDate);
     }
 
     const expenses = await Expense.find(query);
 
     const totalExpenses = expenses.length;
-    const totalAmount = expenses.reduce((sum, exp) => sum + (exp.amount?.value || 0), 0);
-    const pending = expenses.filter(exp => exp.status === 'pending').length;
-    const approved = expenses.filter(exp => exp.status === 'approved').length;
-    const rejected = expenses.filter(exp => exp.status === 'rejected').length;
+    const totalAmount = expenses.reduce((sum, exp) => sum + (exp.totalAmount || 0), 0);
+    const pending = expenses.filter(exp => exp.paymentStatus === 'pending').length;
+    const approved = expenses.filter(exp => exp.approvalStatus === 'approved').length;
+    const rejected = expenses.filter(exp => exp.approvalStatus === 'rejected').length;
     const billable = expenses.filter(exp => exp.isBillable).length;
     const recurring = expenses.filter(exp => exp.isRecurring).length;
 
     const approvedTotal = expenses
-      .filter(exp => exp.status === 'approved')
-      .reduce((sum, exp) => sum + (exp.amount?.value || 0), 0);
+      .filter(exp => exp.approvalStatus === 'approved')
+      .reduce((sum, exp) => sum + (exp.totalAmount || 0), 0);
 
     const pendingTotal = expenses
-      .filter(exp => exp.status === 'pending')
-      .reduce((sum, exp) => sum + (exp.amount?.value || 0), 0);
+      .filter(exp => exp.paymentStatus === 'pending')
+      .reduce((sum, exp) => sum + (exp.totalAmount || 0), 0);
 
     res.json({
       status: 'success',

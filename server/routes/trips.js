@@ -1,58 +1,60 @@
 import express from 'express';
-import { authenticate, requireRole, requireRoles } from '../middleware/auth.js';
+import { authenticate, requireRole, requireRoles, requirePermission } from '../middleware/auth.js';
 import * as tripController from '../controllers/tripController.js';
 
 const router = express.Router();
 
 router.get('/',
   authenticate,
+  requirePermission('VIEW_TRIPS'),
   tripController.getAllTrips
 );
 
 router.get('/:id',
   authenticate,
+  requirePermission('VIEW_TRIPS'),
   tripController.getTripById
 );
 
 router.post('/',
   authenticate,
-  requireRoles('dispatcher', 'fleet_manager', 'admin'),
+  requirePermission('CREATE_TRIP'),
   tripController.createTrip
 );
 
 router.patch('/:id',
   authenticate,
-  requireRoles('dispatcher', 'fleet_manager', 'admin'),
+  requirePermission('UPDATE_TRIP'),
   tripController.updateTrip
 );
 
 router.delete('/:id',
   authenticate,
-  requireRole('admin'),
+  requirePermission('DELETE_TRIP'),
   tripController.deleteTrip
 );
 
 router.post('/:id/dispatch',
   authenticate,
-  requireRoles('dispatcher', 'fleet_manager', 'admin'),
+  requirePermission('CREATE_TRIP'),
   tripController.dispatchTrip
 );
 
 router.post('/:id/start',
   authenticate,
-  requireRoles('driver', 'dispatcher'),
+  requirePermission('START_END_TRIP'),
   tripController.startTrip
 );
 
 router.post('/:id/complete',
   authenticate,
-  requireRoles('driver', 'dispatcher'),
+  requirePermission('START_END_TRIP'),
   tripController.completeTrip
 );
 
 router.post('/:id/cancel',
   authenticate,
-  requireRoles('dispatcher', 'fleet_manager', 'admin'),
+  requirePermission('DELETE_TRIP'),
   tripController.cancelTrip
 );
 

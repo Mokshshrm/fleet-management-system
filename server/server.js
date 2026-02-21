@@ -1,6 +1,11 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 dotenv.config();
 
@@ -27,6 +32,9 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Serve static files from uploads directory
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
 connectDB();
 
 app.get('/health', (req, res) => {
@@ -36,6 +44,14 @@ app.get('/health', (req, res) => {
     timestamp: new Date().toISOString()
   });
 });
+
+app.use((req,res,next)=>{
+    console.log("===============")
+    console.log("Request Api  :  ", req.protocol + '://' + req.get('host') + req.originalUrl)
+    console.log("Request Body :  ", req.body)
+    console.log("===============")
+    next()
+})
 
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);

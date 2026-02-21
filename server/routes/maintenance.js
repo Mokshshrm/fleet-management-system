@@ -1,34 +1,36 @@
 import express from 'express';
-import { authenticate, requireRole, requireRoles } from '../middleware/auth.js';
+import { authenticate, requireRole, requireRoles, requirePermission } from '../middleware/auth.js';
 import * as maintenanceController from '../controllers/maintenanceController.js';
 
 const router = express.Router();
 
 router.get('/',
   authenticate,
+  requirePermission('VIEW_MAINTENANCE'),
   maintenanceController.getAllMaintenanceLogs
 );
 
 router.get('/:id',
   authenticate,
+  requirePermission('VIEW_MAINTENANCE'),
   maintenanceController.getMaintenanceById
 );
 
 router.post('/',
   authenticate,
-  requireRoles('fleet_manager', 'safety_officer'),
+  requirePermission('CREATE_MAINTENANCE'),
   maintenanceController.createMaintenanceLog
 );
 
 router.patch('/:id',
   authenticate,
-  requireRoles('fleet_manager', 'safety_officer'),
+  requirePermission('UPDATE_MAINTENANCE'),
   maintenanceController.updateMaintenanceLog
 );
 
 router.delete('/:id',
   authenticate,
-  requireRole('admin'),
+  requirePermission('DELETE_MAINTENANCE'),
   maintenanceController.deleteMaintenanceLog
 );
 

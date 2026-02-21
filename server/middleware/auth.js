@@ -1,6 +1,7 @@
 import { verifyAccessToken } from '../config/jwt.js';
 import { User } from '../models/index.js';
 import { hasRole } from '../config/roles.js';
+import { hasPermission } from '../config/permissions.js';
 
 export const authenticate = async (req, res, next) => {
   try {
@@ -40,6 +41,18 @@ export const requireRole = (requiredRole) => {
       return res.status(403).json({
         status: 'error',
         message: 'Insufficient permissions'
+      });
+    }
+    next();
+  };
+};
+
+export const requirePermission = (permission) => {
+  return (req, res, next) => {
+    if (!hasPermission(req.role, permission)) {
+      return res.status(403).json({
+        status: 'error',
+        message: 'Insufficient permissions for this action'
       });
     }
     next();

@@ -315,3 +315,54 @@ export const sendLicenseExpiryReminderEmail = async ({ email, driverName, expiry
     html
   });
 };
+
+export const sendDriverCredentials = async ({ email, firstName, companyName, password }) => {
+  const html = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background: #2563eb; color: white; padding: 20px; text-align: center; }
+        .content { background: #f9fafb; padding: 30px; }
+        .credentials { background: white; padding: 20px; border-left: 4px solid #2563eb; margin: 20px 0; }
+        .button { display: inline-block; background: #2563eb; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; margin: 20px 0; }
+        .footer { text-align: center; margin-top: 20px; font-size: 12px; color: #666; }
+        .warning { background: #fef3c7; padding: 10px; border-radius: 5px; margin: 15px 0; }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="header">
+          <h1>Welcome to FleetFlow</h1>
+        </div>
+        <div class="content">
+          <h2>Hi ${firstName},</h2>
+          <p>Your driver account has been created by <strong>${companyName}</strong>. You can now access the FleetFlow system.</p>
+          <div class="credentials">
+            <h3>Your Login Credentials:</h3>
+            <p><strong>Username:</strong> ${email}</p>
+            <p><strong>Temporary Password:</strong> <code style="background: #f3f4f6; padding: 5px 10px; border-radius: 3px;">${password}</code></p>
+          </div>
+          <div class="warning">
+            <strong>⚠️ Security Notice:</strong> Please change your password immediately after logging in for the first time.
+          </div>
+          <a href="${process.env.FRONTEND_URL}/login" class="button">Log In Now</a>
+          <p>If you have any questions or need assistance, please contact your fleet manager.</p>
+        </div>
+        <div class="footer">
+          <p>This email was sent to ${email}.</p>
+          <p>&copy; 2026 FleetFlow. All rights reserved.</p>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+
+  return await sendEmail({
+    to: email,
+    subject: `Your FleetFlow Driver Account - ${companyName}`,
+    html
+  });
+};

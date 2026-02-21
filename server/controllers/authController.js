@@ -1,6 +1,7 @@
 import { Company, User, UserInvitation } from '../models/index.js';
 import { generateAccessToken, generateRefreshToken, verifyRefreshToken } from '../config/jwt.js';
 import { sendInvitationEmail, sendWelcomeEmail } from '../services/emailService.js';
+import { getUserPermissions } from '../config/permissions.js';
 
 export const register = async (req, res) => {
   try {
@@ -32,9 +33,11 @@ export const register = async (req, res) => {
 
     await sendWelcomeEmail(email, firstName, companyName);
 
+    const permissions = getUserPermissions(user.role);
+
     res.status(201).json({
       status: 'success',
-      data: { user, accessToken, refreshToken }
+      data: { user, accessToken, refreshToken, permissions }
     });
   } catch (error) {
     res.status(500).json({ status: 'error', message: error.message });
@@ -61,9 +64,11 @@ export const login = async (req, res) => {
     user.lastLogin = new Date();
     await user.save();
 
+    const permissions = getUserPermissions(user.role);
+
     res.json({
       status: 'success',
-      data: { user, accessToken, refreshToken }
+      data: { user, accessToken, refreshToken, permissions }
     });
   } catch (error) {
     res.status(500).json({ status: 'error', message: error.message });
@@ -93,6 +98,32 @@ export const logout = async (req, res) => {
   try {
     await User.findByIdAndUpdate(req.userId, { refreshToken: null });
     res.json({ status: 'success', message: 'Logged out successfully' });
+  } catch (error) {
+    res.status(500).json({ status: 'error', message: error.message });
+  }
+};
+
+// Get current user info with permissions for frontend UI rendering
+export const getCurrentUser = async (req, res) => {
+  try {
+    const user = await User.findById(req.userId)
+      .select('-password -refreshToken')
+      .populate('companyId', 'name email');
+
+    if (!user) {
+      return res.status(404).json({ status: 'error', message: 'User not found' });
+    }
+
+    const permissions = getUserPermissions(user.role);
+
+    res.json({
+      status: 'success',
+      data: {
+        user,
+        permissions,
+        role: user.role
+      }
+    });
   } catch (error) {
     res.status(500).json({ status: 'error', message: error.message });
   }
@@ -205,6 +236,41 @@ export const verifyInvitation = async (req, res) => {
   }
 };
 
+export const verifyInvitationFromBody = async (req, res) => {
+  try {
+    const { token } = req.body;
+
+    if (!token) {
+      return res.status(400).json({ status: 'error', message: 'Token is required' });
+    }
+
+    const invitation = await UserInvitation.findOne({ token, status: 'pending' })
+      .populate('companyId', 'name')
+      .populate('invitedBy', 'firstName lastName email');
+
+    if (!invitation) {
+      return res.status(400).json({ status: 'error', message: 'Invalid invitation token' });
+    }
+
+    if (invitation.isExpired()) {
+      return res.status(400).json({ status: 'error', message: 'Invitation has expired' });
+    }
+
+    res.json({
+      status: 'success',
+      data: {
+        email: invitation.email,
+        role: invitation.role,
+        companyName: invitation.companyId.name,
+        inviterName: `${invitation.invitedBy.firstName} ${invitation.invitedBy.lastName}`,
+        message: invitation.message
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ status: 'error', message: error.message });
+  }
+};
+
 export const acceptInvitation = async (req, res) => {
   try {
     const { token } = req.params;
@@ -248,9 +314,76 @@ export const acceptInvitation = async (req, res) => {
   }
 };
 
+export const acceptInvitationFromBody = async (req, res) => {
+  try {
+    const { token, password, phone, firstName, lastName } = req.body;
+
+    if (!token || !password) {
+      return res.status(400).json({ status: 'error', message: 'Token and password are required' });
+    }
+
+    const invitation = await UserInvitation.findOne({ token, status: 'pending' })
+      .populate('companyId', 'name');
+
+    if (!invitation) {
+      return res.status(400).json({ status: 'error', message: 'Invalid or expired invitation' });
+    }
+
+    if (invitation.isExpired()) {
+      return res.status(400).json({ status: 'error', message: 'Invitation has expired' });
+    }
+
+    const emailParts = invitation.email.split('@');
+    const defaultFirstName = emailParts[0].charAt(0).toUpperCase() + emailParts[0].slice(1);
+
+    const user = await User.create({
+      companyId: invitation.companyId._id,
+      email: invitation.email,
+      password,
+      firstName: firstName || defaultFirstName,
+      lastName: lastName || 'User',
+      phone: phone || undefined,
+      role: invitation.role,
+      isActive: true
+    });
+
+    invitation.status = 'accepted';
+    invitation.acceptedAt = new Date();
+    await invitation.save();
+
+    await sendWelcomeEmail(user.email, user.firstName, invitation.companyId.name);
+
+    const accessToken = generateAccessToken({ userId: user._id, companyId: user.companyId, role: user.role });
+    const refreshToken = generateRefreshToken({ userId: user._id });
+
+    user.refreshToken = refreshToken;
+    await user.save();
+
+    const userResponse = user.toObject();
+    delete userResponse.password;
+    delete userResponse.refreshToken;
+
+    res.status(201).json({
+      status: 'success',
+      message: 'Account created successfully',
+      data: { 
+        user: userResponse, 
+        accessToken, 
+        refreshToken 
+      }
+    });
+  } catch (error) {
+    console.error('Accept invitation error:', error);
+    res.status(500).json({ status: 'error', message: error.message });
+  }
+};
+
 export const getInvitations = async (req, res) => {
   try {
-    const invitations = await UserInvitation.find({ companyId: req.companyId })
+    const invitations = await UserInvitation.find({ 
+      companyId: req.companyId,
+      status: 'pending'
+    })
       .populate('invitedBy', 'firstName lastName email')
       .sort({ createdAt: -1 });
 

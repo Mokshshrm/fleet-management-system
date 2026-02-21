@@ -7,6 +7,11 @@ const fuelLogSchema = new mongoose.Schema({
     required: true,
     index: true
   },
+  fuelLogNumber: {
+    type: String,
+    unique: true,
+    required: true
+  },
   vehicleId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Vehicle',
@@ -118,9 +123,16 @@ const fuelLogSchema = new mongoose.Schema({
 // fuelLogSchema.index({ companyId: 1, date: -1 });
 // fuelLogSchema.index({ vehicleId: 1, date: -1 });
 
-fuelLogSchema.pre('save', function(next) {
+fuelLogSchema.pre('validate', function(next) {
   if (this.quantity.value && this.cost.pricePerUnit) {
     this.cost.total = this.quantity.value * this.cost.pricePerUnit;
+  }
+  next();
+});
+
+fuelLogSchema.pre('validate', function(next) {
+  if (this.isNew && !this.fuelLogNumber) {
+    this.fuelLogNumber = Date.now().toString();
   }
   next();
 });

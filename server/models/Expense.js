@@ -157,17 +157,18 @@ const expenseSchema = new mongoose.Schema({
 // expenseSchema.index({ companyId: 1, paymentStatus: 1 });
 // expenseSchema.index({ expenseNumber: 1 });
 
-expenseSchema.pre('save', function(next) {
-  if (this.amount !== undefined) {
+// Calculate totalAmount before validation
+expenseSchema.pre('validate', function(next) {
+  if (this.amount !== undefined && !this.totalAmount) {
     this.totalAmount = this.amount + (this.tax || 0);
   }
   next();
 });
 
-expenseSchema.pre('save', async function(next) {
+// Generate expense number before validation
+expenseSchema.pre('validate', function(next) {
   if (this.isNew && !this.expenseNumber) {
-    const count = await mongoose.model('Expense').countDocuments({ companyId: this.companyId });
-    this.expenseNumber = `EXP-${Date.now()}-${String(count + 1).padStart(5, '0')}`;
+    this.expenseNumber = Date.now().toString();
   }
   next();
 });

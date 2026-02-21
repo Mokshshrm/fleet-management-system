@@ -1,4 +1,6 @@
-import { Driver, Trip } from '../models/index.js';
+import { Driver, Trip, User, Company } from '../models/index.js';
+import { sendDriverCredentials } from '../services/emailService.js';
+import crypto from 'crypto';
 
 export const getAllDrivers = async (req, res) => {
   try {
@@ -69,9 +71,99 @@ export const getDriverById = async (req, res) => {
 
 export const createDriver = async (req, res) => {
   try {
-    const driver = await Driver.create({ ...req.body, companyId: req.companyId });
-    res.status(201).json({ status: 'success', data: { driver } });
+    const { 
+      firstName, 
+      lastName, 
+      email, 
+      phone, 
+      dateOfBirth,
+      address,
+      license,
+      employmentType,
+      hireDate
+    } = req.body;
+
+    // Validate required fields
+    if (!firstName || !lastName || !email || !phone) {
+      return res.status(400).json({ 
+        status: 'error', 
+        message: 'firstName, lastName, email, and phone are required' 
+      });
+    }
+
+    if (!license || !license.number || !license.expiryDate) {
+      return res.status(400).json({ 
+        status: 'error', 
+        message: 'License number and expiry date are required' 
+      });
+    }
+
+    // Check if email already exists
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(400).json({ 
+        status: 'error', 
+        message: 'Email already registered in the system' 
+      });
+    }
+
+    // Generate random password (8 characters: letters and numbers)
+    const randomPassword = crypto.randomBytes(4).toString('hex') + 
+                          String(Math.floor(Math.random() * 100)).padStart(2, '0');
+
+    console.log(randomPassword)
+
+    // Create User account with driver role
+    const user = await User.create({
+      companyId: req.companyId,
+      email,
+      password: randomPassword,
+      firstName,
+      lastName,
+      phone,
+      role: 'driver',
+      isActive: true
+    });
+
+    // Create Driver entity linked to User
+    const driver = await Driver.create({
+      userId: user._id,
+      companyId: req.companyId,
+      firstName,
+      lastName,
+      email,
+      phone,
+      dateOfBirth: dateOfBirth || undefined,
+      address: address || undefined,
+      license: {
+        number: license.number,
+        category: license.category || ['car'],
+        issueDate: license.issueDate || undefined,
+        expiryDate: license.expiryDate,
+        issuingAuthority: license.issuingAuthority || undefined
+      },
+      employmentType: employmentType || 'full_time',
+      hireDate: hireDate || new Date()
+    });
+
+    // Get company name for email
+    const company = await Company.findById(req.companyId);
+
+    // Send credentials email to driver
+    await sendDriverCredentials({
+      email,
+      firstName,
+      companyName: company.name,
+      password: randomPassword
+    });
+
+    res.status(201).json({ 
+      status: 'success', 
+      message: 'Driver created successfully. Credentials sent to driver via email.',
+      data: { driver } 
+    });
   } catch (error) {
+    console.error('Create driver error:', error);
     res.status(500).json({ status: 'error', message: error.message });
   }
 };

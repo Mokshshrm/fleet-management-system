@@ -48,7 +48,7 @@ const tripSchema = new mongoose.Schema({
     },
     quantity: Number,
     value: Number,
-    type: String
+    cargoType: String
   },
   origin: {
     name: String,

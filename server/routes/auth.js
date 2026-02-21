@@ -1,5 +1,5 @@
 import express from 'express';
-import { authenticate, requireRole } from '../middleware/auth.js';
+import { authenticate, requireRole, requirePermission } from '../middleware/auth.js';
 import * as authController from '../controllers/authController.js';
 
 const router = express.Router();
@@ -21,6 +21,11 @@ router.post('/logout',
   authController.logout
 );
 
+router.get('/me',
+  authenticate,
+  authController.getCurrentUser
+);
+
 router.post('/forgot-password',
   authController.forgotPassword
 );
@@ -35,13 +40,13 @@ router.post('/verify-email',
 
 router.post('/invite',
   authenticate,
-  requireRole('admin'),
+  requirePermission('CREATE_USER'),
   authController.inviteUser
 );
 
 router.get('/invitations',
   authenticate,
-  requireRole('admin'),
+  requirePermission('VIEW_USERS'),
   authController.getInvitations
 );
 
@@ -49,13 +54,21 @@ router.get('/invitations/:token/verify',
   authController.verifyInvitation
 );
 
+router.post('/verify-invitation',
+  authController.verifyInvitationFromBody
+);
+
 router.post('/invitations/:token/accept',
   authController.acceptInvitation
 );
 
+router.post('/accept-invitation',
+  authController.acceptInvitationFromBody
+);
+
 router.delete('/invitations/:id',
   authenticate,
-  requireRole('admin'),
+  requirePermission('DELETE_USER'),
   authController.cancelInvitation
 );
 

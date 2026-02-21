@@ -1,60 +1,61 @@
 import express from 'express';
-import { authenticate, requireRole, requireRoles } from '../middleware/auth.js';
+import { authenticate, requireRole, requireRoles, requirePermission } from '../middleware/auth.js';
+import { uploadExpenseReceipt, uploadExpenseDocuments, handleUploadError } from '../middleware/upload.js';
 import * as expenseController from '../controllers/expenseController.js';
 
 const router = express.Router();
 
 router.get('/',
   authenticate,
-  requireRoles('fleet_manager', 'financial_analyst', 'admin'),
+  requirePermission('VIEW_EXPENSES'),
   expenseController.getAllExpenses
 );
 
 router.get('/:id',
   authenticate,
-  requireRoles('fleet_manager', 'financial_analyst', 'admin'),
+  requirePermission('VIEW_EXPENSES'),
   expenseController.getExpenseById
 );
 
 router.post('/',
   authenticate,
-  requireRoles('fleet_manager', 'financial_analyst'),
+  requirePermission('CREATE_EXPENSE'),
   expenseController.createExpense
 );
 
 router.patch('/:id',
   authenticate,
-  requireRoles('fleet_manager', 'financial_analyst'),
+  requirePermission('UPDATE_EXPENSE'),
   expenseController.updateExpense
 );
 
 router.delete('/:id',
   authenticate,
-  requireRole('admin'),
+  requirePermission('DELETE_EXPENSE'),
   expenseController.deleteExpense
 );
 
 router.post('/:id/approve',
   authenticate,
-  requireRole('admin'),
+  requirePermission('UPDATE_EXPENSE'),
   expenseController.approveExpense
 );
 
 router.post('/:id/reject',
   authenticate,
-  requireRole('admin'),
+  requirePermission('UPDATE_EXPENSE'),
   expenseController.rejectExpense
 );
 
 router.get('/by-category',
   authenticate,
-  requireRoles('fleet_manager', 'financial_analyst', 'admin'),
+  requirePermission('VIEW_EXPENSES'),
   expenseController.getExpensesByCategory
 );
 
 router.get('/stats',
   authenticate,
-  requireRoles('fleet_manager', 'financial_analyst', 'admin'),
+  requirePermission('VIEW_EXPENSES'),
   expenseController.getExpenseStats
 );
 

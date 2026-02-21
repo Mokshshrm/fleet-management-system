@@ -1,12 +1,12 @@
 import express from 'express';
-import { authenticate, requireRole } from '../middleware/auth.js';
+import { authenticate, requireRole, requirePermission } from '../middleware/auth.js';
 import * as userController from '../controllers/userController.js';
 
 const router = express.Router();
 
 router.get('/',
   authenticate,
-  requireRole('admin'),
+  requirePermission('VIEW_USERS'),
   userController.getAllUsers
 );
 
@@ -17,13 +17,13 @@ router.get('/me',
 
 router.get('/:id',
   authenticate,
-  requireRole('admin'),
+  requirePermission('VIEW_USERS'),
   userController.getUserById
 );
 
 router.patch('/:id',
   authenticate,
-  requireRole('admin'),
+  requirePermission('UPDATE_USER'),
   userController.updateUser
 );
 
@@ -35,13 +35,13 @@ router.patch('/:id/role',
 
 router.patch('/:id/status',
   authenticate,
-  requireRole('admin'),
+  requirePermission('UPDATE_USER'),
   userController.toggleUserStatus
 );
 
 router.delete('/:id',
   authenticate,
-  requireRole('owner'),
+  requirePermission('DELETE_USER'),
   userController.deleteUser
 );
 

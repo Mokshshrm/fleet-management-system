@@ -1,39 +1,42 @@
 import express from 'express';
-import { authenticate, requireRole } from '../middleware/auth.js';
+import { authenticate, requireRole, requirePermission } from '../middleware/auth.js';
 import * as vehicleController from '../controllers/vehicleController.js';
 
 const router = express.Router();
 
 router.get('/',
   authenticate,
+  requirePermission('VIEW_VEHICLES'),
   vehicleController.getAllVehicles
 );
 
 router.get('/available',
   authenticate,
+  requirePermission('VIEW_VEHICLES'),
   vehicleController.getAvailableVehicles
 );
 
 router.get('/:id',
   authenticate,
+  requirePermission('VIEW_VEHICLES'),
   vehicleController.getVehicleById
 );
 
 router.post('/',
   authenticate,
-  requireRole('fleet_manager'),
+  requirePermission('CREATE_VEHICLE'),
   vehicleController.createVehicle
 );
 
 router.patch('/:id',
   authenticate,
-  requireRole('fleet_manager'),
+  requirePermission('UPDATE_VEHICLE'),
   vehicleController.updateVehicle
 );
 
 router.delete('/:id',
   authenticate,
-  requireRole('admin'),
+  requirePermission('DELETE_VEHICLE'),
   vehicleController.deleteVehicle
 );
 

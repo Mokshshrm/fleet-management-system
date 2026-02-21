@@ -157,15 +157,14 @@ const maintenanceLogSchema = new mongoose.Schema({
 // maintenanceLogSchema.index({ 'schedule.scheduledDate': 1 });
 // maintenanceLogSchema.index({ maintenanceNumber: 1 });
 
-maintenanceLogSchema.pre('save', function(next) {
+maintenanceLogSchema.pre('validate', function(next) {
   this.cost.total = (this.cost.parts || 0) + (this.cost.labor || 0) + (this.cost.other || 0) + (this.cost.tax || 0);
   next();
 });
 
-maintenanceLogSchema.pre('save', async function(next) {
+maintenanceLogSchema.pre('validate', function(next) {
   if (this.isNew && !this.maintenanceNumber) {
-    const count = await mongoose.model('MaintenanceLog').countDocuments({ companyId: this.companyId });
-    this.maintenanceNumber = `MAINT-${Date.now()}-${String(count + 1).padStart(5, '0')}`;
+    this.maintenanceNumber = Date.now().toString();
   }
   next();
 });

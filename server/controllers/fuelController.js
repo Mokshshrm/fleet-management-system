@@ -71,12 +71,27 @@ export const createFuelLog = async (req, res) => {
       }
     }
 
-    const log = await FuelLog.create({
+    // Handle file upload if present
+    const logData = {
       ...req.body,
-      companyId: req.companyId
-    });
+      companyId: req.companyId,
+      recordedBy: req.userId
+    };
 
-    res.status(201).json({ status: 'success', data: { fuelLog: log } });
+    if (req.file) {
+      logData.receiptImage = `/uploads/fuel/${req.file.filename}`;
+    }
+
+    const log = await FuelLog.create(logData);
+
+    // Populate and return
+    const populatedLog = await FuelLog.findById(log._id)
+      .populate('vehicleId', 'name licensePlate vehicleType')
+      .populate('driverId', 'firstName lastName')
+      .populate('tripId', 'tripNumber')
+      .populate('recordedBy', 'firstName lastName email');
+
+    res.status(201).json({ status: 'success', data: { fuelLog: populatedLog } });
   } catch (error) {
     res.status(500).json({ status: 'error', message: error.message });
   }
